@@ -1,6 +1,30 @@
 {
-  "java.project.resourceFilters": [
-    "node_modules",
-    ".git"
-  ]
+  "java.project.sourcePaths": [],
+  "java.import.exclusions": [
+    "**/node_modules/**",
+    "**/.metadata/**",
+    "**/archetype-resources/**",
+    "**/META-INF/maven/**",
+    "**/android/**",
+    "**"
+  ],
+  "java.configuration.updateBuildConfiguration": "disabled",
+  "java.compile.nullAnalysis.mode": "disabled",
+  "java.autobuild.enabled": false,
+  "java.import.gradle.enabled": false,
+  "java.import.maven.enabled": false,
+  "java.server.launchMode": "Standard",
+  "java.project.resourceFilters": ["node_modules", ".git", "android", "ios"],
+  "extensions.unwantedRecommendations": [],
+  "files.exclude": {
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/android/build/**": true,
+    "**/android/app/build/**": true
+  }
 }
