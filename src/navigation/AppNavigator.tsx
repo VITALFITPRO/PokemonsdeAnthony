@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useColorScheme } from 'react-native';
 import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 import PokemonDetailScreen from '../screens/PokemonDetailScreen';
@@ -20,10 +19,10 @@ const MainNavigator = () => (
 
 const AppNavigator = () => {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const scheme = useColorScheme(); // Implementación de Modo Claro/Oscuro como pide la rúbrica
+  const isDark = useAppSelector((state) => state.theme.isDark);
 
   return (
-    <NavigationContainer theme={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <RootStack.Screen name="Main" component={MainNavigator} />

@@ -15,7 +15,7 @@ const LoginScreen = () => {
   const [error, setError] = useState('');
 
   const handleLogin = () => {
-    if (username === 'admin' && password === '12345678') {
+    if (username === 'antrch28@gmail.com' && password === '3765844') {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       dispatch(login({ username, rememberPassword: true }));
     } else {
@@ -32,10 +32,12 @@ const LoginScreen = () => {
         <Icon name="person" size={20} color="#666" style={styles.icon} />
         <TextInput
           style={styles.input}
-          placeholder="Usuario"
+          placeholder="Correo electrónico"
+          placeholderTextColor="#888"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
       </View>
 
@@ -44,6 +46,7 @@ const LoginScreen = () => {
         <TextInput
           style={styles.input}
           placeholder="Contraseña"
+          placeholderTextColor="#888"
           value={password}
           onChangeText={setPassword}
           secureTextEntry

@@ -3,16 +3,18 @@ import { persistStore, persistReducer } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer from './slices/authSlice';
 import favoritesReducer from './slices/favoritesSlice';
+import themeReducer from './slices/themeSlice';
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth', 'favorites'] // Guardará la sesión y los pokemon favoritos
+  whitelist: ['auth', 'favorites', 'theme'] // Guardará la sesión, favoritos y preferencia de tema
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   favorites: favoritesReducer,
+  theme: themeReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
