@@ -56,7 +56,7 @@ const PokemonCard: React.FC<Props> = ({ name, url, id }) => {
 };
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#2a2a2a', borderRadius: 12, padding: 15, marginVertical: 8, marginHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
+  card: { backgroundColor: '#2a2a2a', borderRadius: 12, padding: 15, marginVertical: 8, marginHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, borderWidth: 1.5, borderColor: '#5c5cff' },
   infoContainer: { flex: 1 },
   id: { color: '#888', fontSize: 14, fontWeight: 'bold' },
   name: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginVertical: 5 },

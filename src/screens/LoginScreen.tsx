@@ -1,18 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, LayoutAnimation, UIManager, Platform } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  LayoutAnimation, UIManager, Platform, Image, Alert
+} from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch } from '../store/hooks';
 import { login } from '../store/slices/authSlice';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { AuthStackParamList } from '../types/navigation';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+
 const LoginScreen = () => {
   const dispatch = useAppDispatch();
+  const navigation = useNavigation<LoginNav>();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
     if (username === 'antrch28@gmail.com' && password === '3765844') {
@@ -23,19 +33,28 @@ const LoginScreen = () => {
     }
   };
 
+  const handleForgotPassword = () => {
+    Alert.alert(
+      'Recuperar contraseña',
+      'Se enviará un enlace de recuperación a tu correo registrado.',
+      [{ text: 'Entendido', style: 'default' }]
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.circleAvatar} />
-      <Text style={styles.title}>Login</Text>
+      <Image source={require('../assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
+      <Text style={styles.title}>Pokédex</Text>
+      <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
       <View style={styles.inputContainer}>
-        <Icon name="person" size={20} color="#666" style={styles.icon} />
+        <Icon name="mail" size={20} color="#666" style={styles.icon} />
         <TextInput
           style={styles.input}
           placeholder="Correo electrónico"
           placeholderTextColor="#888"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={text => { setUsername(text); setError(''); }}
           autoCapitalize="none"
           keyboardType="email-address"
         />
@@ -48,30 +67,48 @@ const LoginScreen = () => {
           placeholder="Contraseña"
           placeholderTextColor="#888"
           value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          onChangeText={text => { setPassword(text); setError(''); }}
+          secureTextEntry={!showPassword}
         />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+        </TouchableOpacity>
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
+      <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotContainer}>
+        <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>INGRESAR</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.registerContainer} onPress={() => navigation.navigate('Register')}>
+        <Text style={styles.registerText}>¿No tienes cuenta? <Text style={styles.registerLink}>Regístrate</Text></Text>
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 20 },
-  circleAvatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#5c5cff', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 30 },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 24 },
+  logo: { width: 120, height: 120, marginBottom: 16 },
+  circleAvatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#5c5cff', marginBottom: 16 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#888', marginBottom: 30 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, width: '100%' },
   icon: { marginRight: 10 },
   input: { flex: 1, paddingVertical: 12, color: '#fff' },
-  button: { backgroundColor: '#5c5cff', padding: 15, borderRadius: 8, width: '100%', alignItems: 'center', marginTop: 10 },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  errorText: { color: '#ff5c5c', marginBottom: 10 },
+  button: { backgroundColor: '#5c5cff', padding: 15, borderRadius: 8, width: '100%', alignItems: 'center', marginTop: 5 },
+  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  errorText: { color: '#ff5c5c', marginBottom: 8, alignSelf: 'flex-start' },
+  forgotContainer: { alignSelf: 'flex-end', marginBottom: 15 },
+  forgotText: { color: '#5c5cff', fontSize: 13 },
+  registerContainer: { marginTop: 20 },
+  registerText: { color: '#888', fontSize: 14 },
+  registerLink: { color: '#5c5cff', fontWeight: 'bold' },
 });
 
 export default LoginScreen;
