@@ -1,22 +1,24 @@
 import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store, persistor } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDB } from './src/database/db';
 
 const App = () => {
   useEffect(() => {
-    // Inicializar SQLite al abrir la app (en paralelo)
     initDB();
   }, []);
 
   return (
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <AppNavigator />
-      </PersistGate>
-    </Provider>
+    <SafeAreaProvider>
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <AppNavigator />
+        </PersistGate>
+      </Provider>
+    </SafeAreaProvider>
   );
 };
 

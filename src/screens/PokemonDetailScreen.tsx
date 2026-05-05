@@ -37,6 +37,10 @@ const PokemonDetailScreen = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   // Controla que el auto-play solo ocurra una vez por Pokémon
   const autoPlayedRef = useRef<number | null>(null);
+  // Ref para cancelar el timer de auto-play si el usuario sale antes de que dispare
+  const autoPlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Evita que callbacks async hablen en TTS después de que el componente se desmontó
+  const isMountedRef = useRef(true);
 
   const favorites = useAppSelector(state => state.favorites.pokemonIds);
   const isFavorite = favorites.includes(pokemonId);
@@ -111,9 +115,13 @@ const PokemonDetailScreen = () => {
   // la versión instalada de react-native-tts no lo expone como función pública
   // (llamarlo causaría crash al retroceder de pantalla).
   useEffect(() => {
-    Tts.addEventListener('tts-finish', () => setIsPlaying(false));
-    Tts.addEventListener('tts-cancel', () => setIsPlaying(false));
+    isMountedRef.current = true;
+    Tts.addEventListener('tts-finish', () => { if (isMountedRef.current) setIsPlaying(false); });
+    Tts.addEventListener('tts-cancel', () => { if (isMountedRef.current) setIsPlaying(false); });
     return () => {
+      isMountedRef.current = false;
+      // Cancela el timer de auto-play pendiente (evita que hable en otra pantalla)
+      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
       Tts.stop();
     };
   }, []);
@@ -171,9 +179,12 @@ const PokemonDetailScreen = () => {
         // Auto-play: inicia el audio al cargar datos (usando los valores frescos del fetch)
         if (autoPlayedRef.current !== pokemonId) {
           autoPlayedRef.current = pokemonId;
-          setTimeout(() => {
-            iniciarHabla(pokemon, lang, newDesc, newCategory, resolved);
-          }, 400);
+          // Guardamos el ID del timer para poder cancelarlo si el usuario sale antes
+          autoPlayTimerRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
+              iniciarHabla(pokemon, lang, newDesc, newCategory, resolved);
+            }
+          }, 600);
         }
       } catch (err) {
         console.error('Error fetching translated data:', err);

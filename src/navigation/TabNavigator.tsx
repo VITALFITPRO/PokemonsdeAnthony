@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
@@ -10,6 +11,10 @@ import Icon from 'react-native-vector-icons/Ionicons';
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const TabNavigator = () => {
+  const insets = useSafeAreaInsets();
+  // En Android con botones de navegación gestuales/por botones el inset.bottom
+  // ya incluye el espacio necesario. Añadimos 10px extra de padding visual.
+  const tabBarHeight = 56 + insets.bottom;
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -17,10 +22,9 @@ const TabNavigator = () => {
         tabBarStyle: {
             backgroundColor: '#1a1a1a',
             borderTopColor: '#333',
-            // Empuja la barra encima de los botones del sistema Android
-            height: Platform.OS === 'android' ? 65 : 50,
-            paddingBottom: Platform.OS === 'android' ? 10 : 5,
-            paddingTop: 5,
+            height: tabBarHeight,
+            paddingBottom: insets.bottom + 6,
+            paddingTop: 6,
           },
         tabBarActiveTintColor: '#5c5cff',
         tabBarInactiveTintColor: '#666',
