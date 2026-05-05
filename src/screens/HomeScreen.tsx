@@ -2,8 +2,10 @@
 // useEffect ejecuta código cuando la pantalla abre (para cargar datos la primera vez)
 // useState guarda valores que pueden cambiar (como la lista de Pokémon)
 import React, { useEffect, useState } from 'react';
-// View = caja invisible; FlatList = lista larga y eficiente; TextInput = campo de texto; Text = texto
-import { View, FlatList, StyleSheet, TextInput, Text } from 'react-native';
+// View = caja invisible; TextInput = campo de texto; Text = texto
+import { View, StyleSheet, TextInput, Text } from 'react-native';
+// FlashList es como FlatList pero mucho más rápido (Shopify) — requiere estimatedItemSize
+import { FlashList } from '@shopify/flash-list';
 // pokemonService es quien llama a la PokéAPI (https://pokeapi.co) para traer los Pokémon
 import { pokemonService } from '../services/pokemonService';
 // PokemonListItem es el "molde" que describe cómo es un elemento de la lista (solo nombre y URL)
@@ -94,7 +96,7 @@ const HomeScreen = () => {
       </View>
 
       {/*
-        FlatList: lista optimizada para muchos elementos
+        FlashList: versión de alto rendimiento de FlatList (librería de Shopify)
         - data: si hay texto en el buscador usa la lista filtrada, si no usa la lista completa
         - keyExtractor: usa el nombre del Pokémon como identificador único de cada fila
         - renderItem: dibuja cada Pokémon usando el componente PokemonCard
@@ -102,7 +104,7 @@ const HomeScreen = () => {
         - onEndReachedThreshold: empieza a cargar cuando falta el 50% del scroll para el final
         - ListFooterComponent: muestra la rueda de carga al final mientras se cargan más
       */}
-      <FlatList
+      <FlashList<PokemonListItem>
         data={searchQuery.length > 0 ? filteredList : pokemonList}
         keyExtractor={(item) => item.name}
         renderItem={({ item }) => <PokemonCard name={item.name} url={item.url} />}
