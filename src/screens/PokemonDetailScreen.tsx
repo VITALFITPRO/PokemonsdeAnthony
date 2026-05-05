@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from 'react';
-// ScrollView permite hacer scroll cuando el contenido es más largo que la pantalla
-// Dimensions obtiene el ancho real del teléfono para calcular tamaños de imagen
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, Image, StyleSheet, ScrollView,
   TouchableOpacity, Dimensions, ActivityIndicator,
@@ -17,123 +15,88 @@ import { toggleFavorite } from '../store/slices/favoritesSlice';
 import { MainStackParamList } from '../types/navigation';
 import { capitalizeFirstLetter, formatPokemonId } from '../utils/helpers';
 import { addFavoriteDB, removeFavoriteDB } from '../database/db';
-// Tts: convierte texto en voz usando el motor de texto-a-voz del teléfono
 import Tts from 'react-native-tts';
-// traducciones: diccionario local de tipos, stats y textos de UI en ES/EN
 import { traducciones, Lang } from '../utils/translations';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 type DetailScreenRouteProp = RouteProp<MainStackParamList, 'PokemonDetail'>;
 
-/**
- * PokemonDetailScreen — Pantalla de detalle de un Pokémon
- *
- * ¿Qué hace?
- *   - Carga los datos del Pokémon desde la PokéAPI (imagen, stats, tipos, habilidades)
- *   - Carga descripción y categoría desde el endpoint de especie (pokemon-species)
- *   - Traduce habilidades al idioma elegido consultando la URL de cada habilidad
- *   - Permite cambiar entre Español 🇪🇸 e Inglés 🇺🇸 con un botón en el header
- *   - Botón "🔊 Escuchar Pokédex" que lee todo en voz alta al estilo del anime
- *   - Permite marcar/desmarcar favorito (SQLite + Redux)
- *
- * ¿Con qué se conecta?
- *   - pokemonService → datos del Pokémon
- *   - PokéAPI (fetch) → descripción, categoría y nombre de habilidades traducidos
- *   - react-native-tts → motor de voz del teléfono
- *   - translations.ts → diccionario local de tipos y stats
- *   - favoritesSlice + db.ts → sistema de favoritos
- */
 const PokemonDetailScreen = () => {
   const route = useRoute<DetailScreenRouteProp>();
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { pokemonId } = route.params;
 
-  // Datos principales del Pokémon (imagen, stats, tipos, habilidades)
   const [pokemon, setPokemon] = useState<Pokemon | null>(null);
-  // Idioma actual: 'es' = español, 'en' = inglés
   const [lang, setLang] = useState<Lang>('es');
-  // Descripción del Pokémon en el idioma elegido (de la API de especies)
   const [description, setDescription] = useState('');
-  // Categoría (ej: "Pokémon Ratón" / "Mouse Pokémon")
   const [category, setCategory] = useState('');
-  // Nombres de habilidades traducidos al idioma elegido
   const [translatedAbilities, setTranslatedAbilities] = useState<string[]>([]);
-  // true mientras se cargan descripciones y habilidades de la API
   const [loadingExtra, setLoadingExtra] = useState(false);
+  // true cuando el TTS está reproduciendo activamente
+  const [isPlaying, setIsPlaying] = useState(false);
+  // Controla que el auto-play solo ocurra una vez por Pokémon
+  const autoPlayedRef = useRef<number | null>(null);
 
   const favorites = useAppSelector(state => state.favorites.pokemonIds);
   const isFavorite = favorites.includes(pokemonId);
 
-  // Carga los datos principales del Pokémon al abrir la pantalla
-  useEffect(() => {
-    const loadDetail = async () => {
-      const data = await pokemonService.getPokemonById(pokemonId);
-      setPokemon(data);
-    };
-    loadDetail();
-  }, [pokemonId]);
+  // ─── Construye la frase y la lee en voz alta ───────────────────────────────
+  // Recibe los datos como parámetros para poder llamarse desde el useEffect
+  // (evitando depender de estado que podría no estar actualizado)
+  const iniciarHabla = (
+    pkm: Pokemon,
+    idioma: Lang,
+    desc: string,
+    cat: string,
+    abilities: string[],
+  ) => {
+    Tts.stop();
+    Tts.setDefaultLanguage(idioma === 'es' ? 'es-MX' : 'en-US');
+    Tts.setDefaultRate(0.5);
 
-  /**
-   * useEffect de traducciones
-   * Se ejecuta cada vez que cambia el idioma o se carga un nuevo Pokémon.
-   * Hace 3 cosas:
-   *   1. /pokemon-species/{id} → descripción y categoría en el idioma elegido
-   *   2. URL de cada habilidad → nombre oficial traducido
-   */
-  useEffect(() => {
-    if (!pokemon) return;
-    const fetchTranslatedData = async () => {
-      setLoadingExtra(true);
-      try {
-        // Paso 1: especie para obtener descripción y categoría
-        const speciesRes = await fetch(
-          `https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`
-        );
-        const speciesData = await speciesRes.json();
+    const dic = traducciones[idioma];
 
-        // Categoría en el idioma elegido
-        const genusObj = speciesData.genera.find(
-          (g: any) => g.language.name === lang
-        );
-        setCategory(genusObj ? genusObj.genus : 'Pokémon');
+    const tipos = pkm.types
+      .map((t: any) => dic.tipos[t.type.name] || t.type.name)
+      .join(idioma === 'es' ? ' y ' : ' and ');
 
-        // Descripción limpiando saltos de línea especiales
-        const flavorObj = speciesData.flavor_text_entries.find(
-          (f: any) => f.language.name === lang
-        );
-        const cleanDesc = flavorObj
-          ? flavorObj.flavor_text.replace(/[\n\f\r]/g, ' ')
-          : '';
-        setDescription(cleanDesc);
+    const statsText = pkm.stats
+      .map((s: any) => `${dic.stats[s.stat.name] || s.stat.name} ${s.base_stat}`)
+      .join(', ');
 
-        // Paso 2: nombre traducido de cada habilidad
-        const abilitiesPromises = pokemon.abilities.map(async (ab: any) => {
-          const abRes = await fetch(ab.ability.url);
-          const abData = await abRes.json();
-          const abNameObj = abData.names.find(
-            (n: any) => n.language.name === lang
-          );
-          return abNameObj
-            ? abNameObj.name
-            : capitalizeFirstLetter(ab.ability.name);
-        });
+    const habilidadesText = abilities.join(idioma === 'es' ? ' y ' : ' and ');
 
-        const resolved = await Promise.all(abilitiesPromises);
-        setTranslatedAbilities(resolved);
-      } catch (err) {
-        console.error('Error fetching translated data:', err);
-      } finally {
-        setLoadingExtra(false);
+    const frase =
+      idioma === 'es'
+        ? `${pkm.name}. ${cat}. ${desc} Es de tipo ${tipos}. Su estado base es: ${statsText}. Y sus habilidades son: ${habilidadesText}.`
+        : `${pkm.name}. ${cat}. ${desc} It is ${tipos} type. Base stats: ${statsText}. Abilities: ${habilidadesText}.`;
+
+    Tts.speak(frase);
+    setIsPlaying(true);
+  };
+
+  // ─── Botón: activa o desactiva el audio ────────────────────────────────────
+  const toggleTTS = () => {
+    if (isPlaying) {
+      Tts.stop();
+      setIsPlaying(false);
+    } else {
+      if (pokemon) {
+        iniciarHabla(pokemon, lang, description, category, translatedAbilities);
       }
-    };
-    fetchTranslatedData();
-  }, [pokemonId, lang, pokemon]);
+    }
+  };
 
-  /**
-   * handleToggleFavorite — Agrega o quita de favoritos
-   * Sincroniza SQLite (persistencia) y Redux (UI inmediata)
-   */
+  // ─── Cambia idioma y detiene el audio actual ───────────────────────────────
+  const toggleLang = () => {
+    Tts.stop();
+    setIsPlaying(false);
+    // Resetea el auto-play para que se reproduzca en el nuevo idioma
+    autoPlayedRef.current = null;
+    setLang(prev => (prev === 'es' ? 'en' : 'es'));
+  };
+
   const handleToggleFavorite = () => {
     if (isFavorite) {
       removeFavoriteDB(pokemonId);
@@ -143,55 +106,83 @@ const PokemonDetailScreen = () => {
     dispatch(toggleFavorite(pokemonId));
   };
 
-  /**
-   * speakPokedex — Lee el Pokémon en voz alta al estilo del anime
-   *
-   * Frase: "[Nombre]. [Categoría]. [Descripción].
-   *         Es de tipo [Tipos]. Su estado base es: [Stats].
-   *         Y sus habilidades son: [Habilidades]."
-   *
-   * El NOMBRE nunca se traduce (siempre "Pikachu", "Bulbasaur", etc.)
-   * Los tipos, stats y habilidades sí se dicen en el idioma elegido.
-   */
-  const speakPokedex = () => {
+  // ─── Suscripción a eventos TTS ─────────────────────────────────────────────
+  // Solo llamamos Tts.stop() al desmontar; no usamos removeEventListener porque
+  // la versión instalada de react-native-tts no lo expone como función pública
+  // (llamarlo causaría crash al retroceder de pantalla).
+  useEffect(() => {
+    Tts.addEventListener('tts-finish', () => setIsPlaying(false));
+    Tts.addEventListener('tts-cancel', () => setIsPlaying(false));
+    return () => {
+      Tts.stop();
+    };
+  }, []);
+
+  // ─── Carga los datos principales del Pokémon ───────────────────────────────
+  useEffect(() => {
+    const loadDetail = async () => {
+      const data = await pokemonService.getPokemonById(pokemonId);
+      setPokemon(data);
+    };
+    loadDetail();
+  }, [pokemonId]);
+
+  // ─── Carga descripción, categoría y habilidades traducidas ─────────────────
+  // Al terminar, inicia el audio automáticamente (auto-play)
+  useEffect(() => {
     if (!pokemon) return;
-    Tts.stop();
-    Tts.setDefaultLanguage(lang === 'es' ? 'es-MX' : 'en-US');
-    Tts.setDefaultRate(0.5);
+    const fetchTranslatedData = async () => {
+      setLoadingExtra(true);
+      try {
+        const speciesRes = await fetch(
+          `https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`
+        );
+        const speciesData = await speciesRes.json();
 
-    const dic = traducciones[lang];
+        const genusObj = speciesData.genera.find(
+          (g: any) => g.language.name === lang
+        );
+        const newCategory = genusObj ? genusObj.genus : 'Pokémon';
+        setCategory(newCategory);
 
-    const tipos = pokemon.types
-      .map((t: any) => dic.tipos[t.type.name] || t.type.name)
-      .join(lang === 'es' ? ' y ' : ' and ');
+        const flavorObj = speciesData.flavor_text_entries.find(
+          (f: any) => f.language.name === lang
+        );
+        const newDesc = flavorObj
+          ? flavorObj.flavor_text.replace(/[\n\f\r]/g, ' ')
+          : '';
+        setDescription(newDesc);
 
-    const statsText = pokemon.stats
-      .map(
-        (s: any) =>
-          `${dic.stats[s.stat.name] || s.stat.name} ${s.base_stat}`
-      )
-      .join(', ');
+        const abilitiesPromises = pokemon.abilities.map(async (ab: any) => {
+          const abRes = await fetch(ab.ability.url);
+          const abData = await abRes.json();
+          // Siempre preferimos el nombre en inglés desde la API porque la PokéAPI
+          // tiene nombres en español abreviados (ej: 'Absorbe Elec.' en vez del nombre completo).
+          // El inglés siempre está completo: 'Volt Absorb', 'Illuminate', etc.
+          const enName = abData.names.find((n: any) => n.language.name === 'en');
+          return enName
+            ? enName.name
+            : capitalizeFirstLetter(ab.ability.name);
+        });
 
-    const habilidadesText = translatedAbilities.join(
-      lang === 'es' ? ' y ' : ' and '
-    );
+        const resolved = await Promise.all(abilitiesPromises);
+        setTranslatedAbilities(resolved);
 
-    const frase =
-      lang === 'es'
-        ? `${pokemon.name}. ${category}. ${description} Es de tipo ${tipos}. Su estado base es: ${statsText}. Y sus habilidades son: ${habilidadesText}.`
-        : `${pokemon.name}. ${category}. ${description} It is ${tipos} type. Base stats: ${statsText}. Abilities: ${habilidadesText}.`;
-
-    Tts.speak(frase);
-  };
-
-  /**
-   * toggleLang — Alterna entre español e inglés
-   * Detiene el audio si estaba hablando
-   */
-  const toggleLang = () => {
-    Tts.stop();
-    setLang(prev => (prev === 'es' ? 'en' : 'es'));
-  };
+        // Auto-play: inicia el audio al cargar datos (usando los valores frescos del fetch)
+        if (autoPlayedRef.current !== pokemonId) {
+          autoPlayedRef.current = pokemonId;
+          setTimeout(() => {
+            iniciarHabla(pokemon, lang, newDesc, newCategory, resolved);
+          }, 400);
+        }
+      } catch (err) {
+        console.error('Error fetching translated data:', err);
+      } finally {
+        setLoadingExtra(false);
+      }
+    };
+    fetchTranslatedData();
+  }, [pokemonId, lang, pokemon]);
 
   if (!pokemon) {
     return (
@@ -215,7 +206,6 @@ const PokemonDetailScreen = () => {
           <Icon name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
 
-        {/* Botón idioma: cambia entre "Cambiar a Inglés 🇺🇸" y "Cambiar a Español 🇪🇸" */}
         <TouchableOpacity onPress={toggleLang} style={styles.langButton}>
           <Text style={styles.langText}>{dic.ui.buttonLang}</Text>
         </TouchableOpacity>
@@ -229,29 +219,26 @@ const PokemonDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Imagen oficial, centrada, sin recortes */}
+      {/* Imagen oficial */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
       </View>
 
       {/* Tarjeta de información */}
       <View style={styles.card}>
-        {/* Nombre (NUNCA se traduce) y número */}
         <Text style={styles.name}>
           {capitalizeFirstLetter(pokemon.name)} {formatPokemonId(pokemon.id)}
         </Text>
 
-        {/* Categoría en el idioma elegido */}
         {category ? <Text style={styles.category}>{category}</Text> : null}
 
-        {/* Tipos del Pokémon */}
         <View style={styles.typesRow}>
           {pokemon.types.map(t => (
             <PokemonTypeBadge key={t.type.name} type={t.type.name} />
           ))}
         </View>
 
-        {/* Estadísticas base con nombres traducidos */}
+        {/* Stats base */}
         <Text style={styles.sectionTitle}>{dic.ui.statsTitle}</Text>
         {pokemon.stats.map(s => (
           <StatBar
@@ -262,7 +249,7 @@ const PokemonDetailScreen = () => {
           />
         ))}
 
-        {/* Habilidades traducidas */}
+        {/* Habilidades */}
         <Text style={styles.sectionTitle}>{dic.ui.abilitiesTitle}</Text>
         {loadingExtra ? (
           <ActivityIndicator color="#5c5cff" style={{ marginVertical: 10 }} />
@@ -276,7 +263,7 @@ const PokemonDetailScreen = () => {
           </View>
         )}
 
-        {/* Descripción en el idioma elegido */}
+        {/* Descripción */}
         {description ? (
           <>
             <Text style={styles.sectionTitle}>
@@ -286,13 +273,23 @@ const PokemonDetailScreen = () => {
           </>
         ) : null}
 
-        {/* Botón rojo "🔊 Escuchar Pokédex" */}
+        {/* Botón de audio: Activar / Desactivar */}
         <TouchableOpacity
-          style={[styles.ttsButton, loadingExtra && styles.ttsButtonDisabled]}
-          onPress={speakPokedex}
+          style={[
+            styles.ttsButton,
+            isPlaying && styles.ttsButtonPlaying,
+            loadingExtra && styles.ttsButtonDisabled,
+          ]}
+          onPress={toggleTTS}
           disabled={loadingExtra}
         >
-          <Text style={styles.ttsText}>{dic.ui.buttonTTS}</Text>
+          <Text style={styles.ttsText}>
+            {loadingExtra
+              ? '⏳ Cargando...'
+              : isPlaying
+              ? '🔇 Desactivar Audio'
+              : '🔊 Activar Audio Pokédex'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -325,11 +322,12 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: SCREEN_WIDTH,
-    height: 260,
+    height: 300,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  image: { width: SCREEN_WIDTH * 0.75, height: 240 },
+  image: { width: SCREEN_WIDTH * 0.85, height: 280 },
   card: {
     backgroundColor: '#1e1e1e',
     borderTopLeftRadius: 30,
@@ -387,6 +385,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 25,
   },
+  ttsButtonPlaying: { backgroundColor: '#5c5cff' },
   ttsButtonDisabled: { backgroundColor: '#555' },
   ttsText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
 });

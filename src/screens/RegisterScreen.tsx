@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ScrollView
+  StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { AuthStackParamList } from '../types/navigation';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { addUser } from '../store/slices/usersSlice';
 
 type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
 const RegisterScreen = () => {
   const navigation = useNavigation<RegisterNav>();
+  const dispatch = useAppDispatch();
+  const existingUsers = useAppSelector(state => state.users.users);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +37,16 @@ const RegisterScreen = () => {
       Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.');
       return;
     }
+    // Verifica que el email no esté ya registrado
+    const alreadyExists = existingUsers.find(
+      u => u.email.toLowerCase() === email.toLowerCase()
+    );
+    if (alreadyExists) {
+      Alert.alert('Error', 'Ya existe una cuenta con ese correo electrónico.');
+      return;
+    }
+    // Guarda el nuevo usuario en Redux (persistido en AsyncStorage)
+    dispatch(addUser({ email: email.toLowerCase().trim(), password, name }));
     Alert.alert(
       '¡Registro exitoso!',
       'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.',
@@ -40,6 +55,10 @@ const RegisterScreen = () => {
   };
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#1a1a1a' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Icon name="arrow-back" size={24} color="#5c5cff" />
@@ -113,6 +132,7 @@ const RegisterScreen = () => {
         <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginLink}>Inicia sesión</Text></Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

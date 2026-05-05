@@ -1,89 +1,140 @@
-// React es la librería principal que hace funcionar la interfaz de la app
-// useEffect ejecuta código cuando la pantalla abre (para cargar datos la primera vez)
-// useState guarda valores que pueden cambiar (como la lista de Pokémon)
 import React, { useEffect, useState } from 'react';
-// View = caja invisible; TextInput = campo de texto; Text = texto
-import { View, StyleSheet, TextInput, Text } from 'react-native';
-// FlashList es como FlatList pero mucho más rápido (Shopify) — requiere estimatedItemSize
+import {
+  View, StyleSheet, TextInput, Text,
+  ScrollView, TouchableOpacity, ActivityIndicator,
+} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-// pokemonService es quien llama a la PokéAPI (https://pokeapi.co) para traer los Pokémon
 import { pokemonService } from '../services/pokemonService';
-// PokemonListItem es el "molde" que describe cómo es un elemento de la lista (solo nombre y URL)
 import { PokemonListItem } from '../types/pokemon';
-// PokemonCard es la tarjetita que muestra cada Pokémon en la lista
 import PokemonCard from '../components/PokemonCard';
-// LoadingSpinner es la rueda que gira mientras se cargan datos
 import LoadingSpinner from '../components/LoadingSpinner';
-// Icon permite usar íconos (como la lupa del buscador)
 import Icon from 'react-native-vector-icons/Ionicons';
 
-/**
- * HomeScreen — Pantalla principal de la app (la lista de Pokémon)
- *
- * ¿Qué hace?
- *   - Muestra una lista de Pokémon cargados desde la PokéAPI
- *   - Carga de 20 en 20 (scroll infinito: al llegar al final carga 20 más)
- *   - Tiene un buscador que filtra la lista por nombre en tiempo real
- *
- * ¿Con qué se conecta?
- *   - pokemonService → llama a internet para traer la lista de Pokémon
- *   - PokemonCard → cada elemento de la lista usa este componente
- *   - AppNavigator → desde aquí se puede navegar al detalle de cada Pokémon
- */
+// Todos los tipos de Pokémon con nombre en español y su color representativo
+const POKEMON_TYPES = [
+  { key: 'normal',   label: 'Normal',    color: '#A8A878' },
+  { key: 'fire',     label: 'Fuego',     color: '#F08030' },
+  { key: 'water',    label: 'Agua',      color: '#6890F0' },
+  { key: 'electric', label: 'Eléctrico', color: '#F8D030' },
+  { key: 'grass',    label: 'Planta',    color: '#78C850' },
+  { key: 'ice',      label: 'Hielo',     color: '#98D8D8' },
+  { key: 'fighting', label: 'Lucha',     color: '#C03028' },
+  { key: 'poison',   label: 'Veneno',    color: '#A040A0' },
+  { key: 'ground',   label: 'Tierra',    color: '#E0C068' },
+  { key: 'flying',   label: 'Volador',   color: '#A890F0' },
+  { key: 'psychic',  label: 'Psíquico',  color: '#F85888' },
+  { key: 'bug',      label: 'Bicho',     color: '#A8B820' },
+  { key: 'rock',     label: 'Roca',      color: '#B8A038' },
+  { key: 'ghost',    label: 'Fantasma',  color: '#705898' },
+  { key: 'dragon',   label: 'Dragón',    color: '#7038F8' },
+  { key: 'dark',     label: 'Siniestro', color: '#705848' },
+  { key: 'steel',    label: 'Acero',     color: '#B8B8D0' },
+  { key: 'fairy',    label: 'Hada',      color: '#EE99AC' },
+];
+
 const HomeScreen = () => {
-  // pokemonList: la lista completa de Pokémon que ya se cargaron
+  // Lista de Pokémon cargados con scroll infinito (para mostrar)
   const [pokemonList, setPokemonList] = useState<PokemonListItem[]>([]);
-  // loading: true cuando estamos esperando datos de internet, false cuando ya llegaron
+  // Lista COMPLETA de todos los Pokémon (solo nombres+URLs) para el buscador
+  const [allPokemon, setAllPokemon] = useState<PokemonListItem[]>([]);
   const [loading, setLoading] = useState(false);
-  // offset: cuántos Pokémon ya cargamos (empieza en 0, sube de 20 en 20)
   const [offset, setOffset] = useState(0);
-  // searchQuery: lo que el usuario escribe en el buscador
   const [searchQuery, setSearchQuery] = useState('');
-  // limit: cuántos Pokémon traemos por cada llamada a la API
   const limit = 20;
 
-  /**
-   * loadMorePokemon — Carga más Pokémon desde la API y los agrega a la lista
-   *
-   * - Si ya estamos cargando o el usuario está buscando, no hace nada (evita duplicados)
-   * - Llama a pokemonService.getPokemonList con el límite y el offset actual
-   * - Agrega los nuevos Pokémon al final de la lista existente (scroll infinito)
-   * - Sube el offset para que la próxima llamada traiga los siguientes
-   */
+  // Tipo seleccionado para filtrar
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [typeFilterList, setTypeFilterList] = useState<PokemonListItem[]>([]);
+  const [loadingType, setLoadingType] = useState(false);
+
+  // Carga TODOS los nombres de Pokémon una sola vez al iniciar
+  // (solo nombres y URLs, sin datos de detalle → llamada ligera)
+  useEffect(() => {
+    const loadAllNames = async () => {
+      try {
+        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10000&offset=0');
+        const data = await res.json();
+        setAllPokemon(data.results);
+      } catch (e) {
+        console.error('Error cargando lista completa:', e);
+      }
+    };
+    loadAllNames();
+  }, []);
+
+  // Carga más Pokémon de la lista general (scroll infinito)
   const loadMorePokemon = async () => {
-    if (loading || searchQuery.length > 0) return; // No cargar si ya estamos cargando o buscando
+    // No cargar si ya hay una carga en curso, si hay búsqueda activa, o si hay filtro de tipo
+    if (loading || searchQuery.length > 0 || selectedType !== null) return;
     setLoading(true);
     try {
       const data = await pokemonService.getPokemonList(limit, offset);
-      setPokemonList((prev) => [...prev, ...data.results]); // Agrega al final (no reemplaza)
-      setOffset((prev) => prev + limit);                    // Sube el contador para la próxima carga
+      setPokemonList((prev) => [...prev, ...data.results]);
+      setOffset((prev) => prev + limit);
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false); // Siempre apaga el loading al terminar (exitoso o con error)
+      setLoading(false);
     }
   };
 
-  // Se ejecuta una vez cuando la pantalla abre: carga los primeros 20 Pokémon
+  // Carga los primeros Pokémon al abrir la pantalla
   useEffect(() => {
     loadMorePokemon();
   }, []);
 
-  /**
-   * renderFooter — Muestra la rueda de carga al final de la lista
-   * Solo aparece cuando loading=true (cuando se están cargando más Pokémon)
-   */
+  // Selecciona o deselecciona un tipo para filtrar la lista
+  const handleTypeSelect = async (typeKey: string) => {
+    if (selectedType === typeKey) {
+      // Tap en el tipo ya activo → quitar filtro
+      setSelectedType(null);
+      setTypeFilterList([]);
+      return;
+    }
+
+    setSelectedType(typeKey);
+    setLoadingType(true);
+    setSearchQuery(''); // Limpia la búsqueda al activar filtro por tipo
+
+    try {
+      // La API devuelve TODOS los Pokémon de ese tipo
+      const res = await fetch(`https://pokeapi.co/api/v2/type/${typeKey}`);
+      const data = await res.json();
+      const list: PokemonListItem[] = data.pokemon.map((p: any) => ({
+        name: p.pokemon.name,
+        url: p.pokemon.url,
+      }));
+      setTypeFilterList(list);
+    } catch (e) {
+      console.error(e);
+      setTypeFilterList([]);
+    } finally {
+      setLoadingType(false);
+    }
+  };
+
   const renderFooter = () => {
     if (!loading) return null;
     return <LoadingSpinner />;
   };
 
-  // filteredList: filtra la lista por el texto del buscador (insensible a mayúsculas)
-  const filteredList = pokemonList.filter(p => p.name.includes(searchQuery.toLowerCase()));
+  // Lista filtrada por nombre — usa la lista COMPLETA para encontrar cualquier Pokémon
+  const filteredList = allPokemon.filter(p =>
+    p.name.includes(searchQuery.toLowerCase().trim())
+  );
+
+  // Decide qué lista mostrar: tipo > búsqueda > lista completa
+  const displayList: PokemonListItem[] =
+    selectedType !== null
+      ? typeFilterList
+      : searchQuery.length > 0
+      ? filteredList
+      : pokemonList;
 
   return (
     <View style={styles.container}>
-      {/* Barra de búsqueda con ícono de lupa */}
+
+      {/* ── Barra de búsqueda ───────────────────────────────────────────────── */}
       <View style={styles.searchContainer}>
         <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
         <TextInput
@@ -91,38 +142,110 @@ const HomeScreen = () => {
           placeholder="Buscar Pokémon..."
           placeholderTextColor="#888"
           value={searchQuery}
-          onChangeText={setSearchQuery} // Actualiza searchQuery en cada tecla que se escribe
+          onChangeText={(text) => {
+            setSearchQuery(text);
+            // Al escribir, quita el filtro de tipo activo
+            if (selectedType) {
+              setSelectedType(null);
+              setTypeFilterList([]);
+            }
+          }}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Icon name="close-circle" size={18} color="#888" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/*
-        FlashList: versión de alto rendimiento de FlatList (librería de Shopify)
-        - data: si hay texto en el buscador usa la lista filtrada, si no usa la lista completa
-        - keyExtractor: usa el nombre del Pokémon como identificador único de cada fila
-        - renderItem: dibuja cada Pokémon usando el componente PokemonCard
-        - onEndReached: cuando el usuario llega al final, carga más Pokémon
-        - onEndReachedThreshold: empieza a cargar cuando falta el 50% del scroll para el final
-        - ListFooterComponent: muestra la rueda de carga al final mientras se cargan más
-      */}
-      <FlashList<PokemonListItem>
-        data={searchQuery.length > 0 ? filteredList : pokemonList}
-        keyExtractor={(item) => item.name}
-        renderItem={({ item }) => <PokemonCard name={item.name} url={item.url} />}
-        onEndReached={loadMorePokemon}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
-        contentContainerStyle={styles.listContent}
-      />
+      {/* ── Filtro de categorías (scroll horizontal) ─────────────────────────── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.typeScrollView}
+        contentContainerStyle={styles.typeScrollContent}
+      >
+        {POKEMON_TYPES.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[
+              styles.typeChip,
+              selectedType === t.key
+                ? { backgroundColor: t.color, borderColor: t.color }
+                : { backgroundColor: '#2a2a2a', borderColor: '#444' },
+            ]}
+            onPress={() => handleTypeSelect(t.key)}
+          >
+            <Text
+              style={[
+                styles.typeChipText,
+                selectedType === t.key && styles.typeChipTextSelected,
+              ]}
+            >
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* ── Indicador mientras se carga el filtro por tipo ───────────────────── */}
+      {loadingType ? (
+        <View style={styles.loadingTypeContainer}>
+          <ActivityIndicator color="#5c5cff" size="large" />
+          <Text style={styles.loadingTypeText}>
+            Cargando Pokémon tipo{' '}
+            {POKEMON_TYPES.find(t => t.key === selectedType)?.label ?? ''}...
+          </Text>
+        </View>
+      ) : (
+        <FlashList<PokemonListItem>
+          data={displayList}
+          keyExtractor={(item) => item.name}
+          renderItem={({ item }) => <PokemonCard name={item.name} url={item.url} />}
+          onEndReached={loadMorePokemon}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', paddingTop: 50 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', marginHorizontal: 16, marginBottom: 10, borderRadius: 8, paddingHorizontal: 10 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
   searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, color: '#fff', paddingVertical: 10 },
-  listContent: { paddingBottom: 20 }
+  typeScrollView: { maxHeight: 46, marginBottom: 8 },
+  typeScrollContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+    alignItems: 'center',
+  },
+  typeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  typeChipText: { color: '#aaa', fontSize: 12, fontWeight: '600' },
+  typeChipTextSelected: { color: '#fff' },
+  loadingTypeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingTypeText: { color: '#aaa', marginTop: 12, fontSize: 14 },
+  listContent: { paddingBottom: 20 },
 });
 
 export default HomeScreen;

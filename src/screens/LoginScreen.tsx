@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  LayoutAnimation, UIManager, Platform, Image, Alert
+  LayoutAnimation, UIManager, Platform, Image, Alert,
+  KeyboardAvoidingView, ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { login } from '../store/slices/authSlice';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { AuthStackParamList } from '../types/navigation';
@@ -19,15 +20,23 @@ type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 const LoginScreen = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<LoginNav>();
+  // Lee todos los usuarios registrados (persiste entre sesiones)
+  const registeredUsers = useAppSelector(state => state.users.users);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
-    if (username === 'antrch28@gmail.com' && password === '3765844') {
+    // Busca el usuario por email (case insensitive) y verifica la contraseña
+    const found = registeredUsers.find(
+      u =>
+        u.email.toLowerCase() === username.toLowerCase().trim() &&
+        u.password === password
+    );
+    if (found) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      dispatch(login({ username, rememberPassword: true }));
+      dispatch(login({ username: found.email, rememberPassword: true }));
     } else {
       setError('Credenciales incorrectas');
     }
@@ -42,8 +51,21 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Image source={require('../assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
+    <KeyboardAvoidingView
+      style={styles.keyboardView}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+      {/* Logo sin marco: imagen limpia sobre fondo oscuro */}
+      <Image
+        source={require('../assets/images/logo.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
       <Text style={styles.title}>Pokédex</Text>
       <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
@@ -88,13 +110,23 @@ const LoginScreen = () => {
       <TouchableOpacity style={styles.registerContainer} onPress={() => navigation.navigate('Register')}>
         <Text style={styles.registerText}>¿No tienes cuenta? <Text style={styles.registerLink}>Regístrate</Text></Text>
       </TouchableOpacity>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 24 },
-  logo: { width: 120, height: 120, marginBottom: 16 },
+  keyboardView: { flex: 1, backgroundColor: '#1a1a1a' },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    padding: 24,
+    paddingBottom: 40,
+  },
+  // Logo a tamaño completo, sin ningún contenedor con fondo visible
+  logo: { width: 220, height: 220, marginBottom: 16, backgroundColor: 'transparent' },
   circleAvatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#5c5cff', marginBottom: 16 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#888', marginBottom: 30 },
