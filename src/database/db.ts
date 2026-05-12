@@ -39,3 +39,22 @@ export const removeFavoriteDB = async (id: number) => {
     console.error('[SQLite] Error eliminando favorito', error);
   }
 };
+
+// Carga todos los ids de favoritos desde SQLite al iniciar la app
+// Se usa como fuente de verdad al arrancar (en vez de redux-persist)
+export const loadFavoritesFromDB = async (): Promise<number[]> => {
+  try {
+    const db = await getDBConnection();
+    const results = await db.executeSql('SELECT id FROM favorites;');
+    const ids: number[] = [];
+    const rows = results[0].rows;
+    for (let i = 0; i < rows.length; i++) {
+      ids.push(rows.item(i).id);
+    }
+    console.log(`[SQLite] ${ids.length} favoritos cargados desde BD`);
+    return ids;
+  } catch (error) {
+    console.error('[SQLite] Error cargando favoritos', error);
+    return [];
+  }
+};

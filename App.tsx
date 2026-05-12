@@ -4,11 +4,20 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store, persistor } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
-import { initDB } from './src/database/db';
+import { initDB, loadFavoritesFromDB } from './src/database/db';
+import { setFavorites } from './src/store/slices/favoritesSlice';
 
 const App = () => {
   useEffect(() => {
-    initDB();
+    const setup = async () => {
+      await initDB();
+      // SQLite como fuente de verdad: sobreescribe lo que redux-persist haya cargado
+      const ids = await loadFavoritesFromDB();
+      if (ids.length > 0) {
+        store.dispatch(setFavorites(ids));
+      }
+    };
+    setup();
   }, []);
 
   return (

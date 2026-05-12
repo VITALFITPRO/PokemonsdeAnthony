@@ -47,3 +47,16 @@ export interface Pokemon {
     slot: number;
   }[];
 }
+
+// Modelo interno limpio — independiente de la estructura de PokéAPI
+// Los servicios transforman la respuesta cruda a este formato
+export interface PokemonViewData {
+  id: number;
+  name: string;
+  image: string;
+  types: string[];
+  stats: Array<{ name: string; value: number }>;
+  abilities: Array<{ name: string; url: string }>;
+  height: number;
+  weight: number;
+}

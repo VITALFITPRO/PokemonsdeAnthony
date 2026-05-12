@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { pokemonService } from '../services/pokemonService';
-import { Pokemon } from '../types/pokemon';
 import PokemonTypeBadge from './PokemonTypeBadge';
 import { capitalizeFirstLetter, formatPokemonId } from '../utils/helpers';
 import { MainStackParamList } from '../types/navigation';
+import { usePokemonCardViewModel } from '../viewmodels/usePokemonCardViewModel';
 
 interface Props {
   name: string;
@@ -15,26 +14,15 @@ interface Props {
 }
 
 const PokemonCard: React.FC<Props> = ({ name, url, id }) => {
-  const [pokemon, setPokemon] = useState<Pokemon | null>(null);
+  const { pokemon, loading } = usePokemonCardViewModel(name, url, id);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        const identifier = id || name;
-        const data = await pokemonService.getPokemonById(identifier);
-        setPokemon(data);
-      } catch (error) {
-        console.error('Error fetching card detail', error);
-      }
-    };
-    fetchDetail();
-  }, [name, id]);
-
-  if (!pokemon) return <View style={styles.card}><Text style={styles.loading}>Cargando...</Text></View>;
+  if (loading || !pokemon) {
+    return <View style={styles.card}><Text style={styles.loading}>Cargando...</Text></View>;
+  }
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.card}
       onPress={() => navigation.navigate('PokemonDetail', { pokemonName: pokemon.name, pokemonId: pokemon.id })}
     >
@@ -42,14 +30,14 @@ const PokemonCard: React.FC<Props> = ({ name, url, id }) => {
         <Text style={styles.id}>{formatPokemonId(pokemon.id)}</Text>
         <Text style={styles.name}>{capitalizeFirstLetter(pokemon.name)}</Text>
         <View style={styles.typesContainer}>
-          {pokemon.types.map((t) => (
-            <PokemonTypeBadge key={t.type.name} type={t.type.name} />
+          {pokemon.types.map(t => (
+            <PokemonTypeBadge key={t} type={t} />
           ))}
         </View>
       </View>
-      <Image 
-        source={{ uri: pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default }} 
-        style={styles.image} 
+      <Image
+        source={{ uri: pokemon.image }}
+        style={styles.image}
       />
     </TouchableOpacity>
   );

@@ -1,56 +1,34 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { AuthStackParamList } from '../types/navigation';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { addUser } from '../store/slices/usersSlice';
-
-type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
+import { useRegisterViewModel } from '../viewmodels/useAuthViewModel';
 
 const RegisterScreen = () => {
-  const navigation = useNavigation<RegisterNav>();
-  const dispatch = useAppDispatch();
-  const existingUsers = useAppSelector(state => state.users.users);
+  const {
+    name, setName,
+    email, setEmail,
+    password, setPassword,
+    confirmPassword, setConfirmPassword,
+    showPassword, setShowPassword,
+    showConfirm, setShowConfirm,
+    handleRegister,
+    goToLogin,
+    goBack,
+  } = useRegisterViewModel();
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const handleRegister = () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Por favor completa todos los campos.');
+  const onRegister = () => {
+    const error = handleRegister();
+    if (error) {
+      Alert.alert('Error', error);
       return;
     }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden.');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-    // Verifica que el email no esté ya registrado
-    const alreadyExists = existingUsers.find(
-      u => u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (alreadyExists) {
-      Alert.alert('Error', 'Ya existe una cuenta con ese correo electrónico.');
-      return;
-    }
-    // Guarda el nuevo usuario en Redux (persistido en AsyncStorage)
-    dispatch(addUser({ email: email.toLowerCase().trim(), password, name }));
     Alert.alert(
       '¡Registro exitoso!',
       'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.',
-      [{ text: 'Ir al Login', onPress: () => navigation.navigate('Login') }]
+      [{ text: 'Ir al Login', onPress: goToLogin }]
     );
   };
 
@@ -60,7 +38,7 @@ const RegisterScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <TouchableOpacity style={styles.backButton} onPress={goBack}>
         <Icon name="arrow-back" size={24} color="#5c5cff" />
       </TouchableOpacity>
 
@@ -124,11 +102,11 @@ const RegisterScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
+      <TouchableOpacity style={styles.button} onPress={onRegister}>
         <Text style={styles.buttonText}>REGISTRARSE</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.loginContainer} onPress={() => navigation.navigate('Login')}>
+      <TouchableOpacity style={styles.loginContainer} onPress={goToLogin}>
         <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginLink}>Inicia sesión</Text></Text>
       </TouchableOpacity>
     </ScrollView>

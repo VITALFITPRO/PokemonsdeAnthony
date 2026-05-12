@@ -1,70 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, Image, Alert, Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { logout } from '../store/slices/authSlice';
-import { toggleTheme } from '../store/slices/themeSlice';
-import { updateProfile } from '../store/slices/profileSlice';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
 
 // Opciones de género disponibles
 const GENDER_OPTIONS = ['Masculino', 'Femenino', 'Otro'];
 
 const ProfileScreen = () => {
-  const dispatch = useAppDispatch();
-  const navigation = useNavigation<any>();
-
-  const username = useAppSelector(state => state.auth.username);
-  const favoritesCount = useAppSelector(state => state.favorites.pokemonIds.length);
-  const isDark = useAppSelector(state => state.theme.isDark);
-  const profile = useAppSelector(state => state.profile);
-
-  // Estado local de edición (se guarda al presionar "Guardar")
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState(profile.displayName);
-  const [draftAge, setDraftAge] = useState(profile.age);
-  const [draftGender, setDraftGender] = useState(profile.gender);
-
-  const bg = isDark ? '#1a1a1a' : '#f0f0f0';
-  const cardBg = isDark ? '#2a2a2a' : '#fff';
-  const textColor = isDark ? '#fff' : '#111';
-  const subColor = isDark ? '#aaa' : '#555';
-
-  // Abre la galería para seleccionar una foto de perfil
-  const handlePickPhoto = () => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 0.8, selectionLimit: 1 },
-      (response) => {
-        if (response.didCancel || response.errorCode) return;
-        const uri = response.assets?.[0]?.uri;
-        if (uri) {
-          dispatch(updateProfile({ photoUri: uri }));
-        }
-      }
-    );
-  };
-
-  // Guarda los datos editados en Redux (persiste con redux-persist)
-  const handleSave = () => {
-    dispatch(updateProfile({
-      displayName: draftName.trim(),
-      age: draftAge.trim(),
-      gender: draftGender,
-    }));
-    setEditing(false);
-  };
-
-  // Cancela la edición y restaura los valores guardados
-  const handleCancel = () => {
-    setDraftName(profile.displayName);
-    setDraftAge(profile.age);
-    setDraftGender(profile.gender);
-    setEditing(false);
-  };
+  const {
+    username, favoritesCount, isDark, profile,
+    editing, draftName, draftAge, draftGender,
+    bg, cardBg, textColor, subColor,
+    setEditing, setDraftName, setDraftAge, setDraftGender,
+    handlePickPhoto, handleSave, handleCancel,
+    handleToggleTheme, handleLogout,
+  } = useProfileViewModel();
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={styles.content}>
@@ -209,7 +162,7 @@ const ProfileScreen = () => {
 
         <TouchableOpacity
           style={styles.statRow}
-          onPress={() => dispatch(toggleTheme())}
+          onPress={handleToggleTheme}
         >
           <Icon name={isDark ? 'sunny' : 'moon'} size={22} color={isDark ? '#F8D030' : '#5c5cff'} />
           <Text style={[styles.statLabel, { color: textColor }]}>
@@ -225,7 +178,7 @@ const ProfileScreen = () => {
         onPress={() =>
           Alert.alert('Cerrar sesión', '¿Estás seguro que quieres salir?', [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => dispatch(logout()) },
+            { text: 'Salir', style: 'destructive', onPress: handleLogout },
           ])
         }
       >

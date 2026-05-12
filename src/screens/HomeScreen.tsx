@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View, StyleSheet, TextInput, Text,
   ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { pokemonService } from '../services/pokemonService';
 import { PokemonListItem } from '../types/pokemon';
 import PokemonCard from '../components/PokemonCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useHomeViewModel } from '../viewmodels/useHomeViewModel';
 
 // Todos los tipos de Pokémon con nombre en español y su color representativo
 const POKEMON_TYPES = [
@@ -33,103 +33,21 @@ const POKEMON_TYPES = [
 ];
 
 const HomeScreen = () => {
-  // Lista de Pokémon cargados con scroll infinito (para mostrar)
-  const [pokemonList, setPokemonList] = useState<PokemonListItem[]>([]);
-  // Lista COMPLETA de todos los Pokémon (solo nombres+URLs) para el buscador
-  const [allPokemon, setAllPokemon] = useState<PokemonListItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const limit = 20;
-
-  // Tipo seleccionado para filtrar
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [typeFilterList, setTypeFilterList] = useState<PokemonListItem[]>([]);
-  const [loadingType, setLoadingType] = useState(false);
-
-  // Carga TODOS los nombres de Pokémon una sola vez al iniciar
-  // (solo nombres y URLs, sin datos de detalle → llamada ligera)
-  useEffect(() => {
-    const loadAllNames = async () => {
-      try {
-        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10000&offset=0');
-        const data = await res.json();
-        setAllPokemon(data.results);
-      } catch (e) {
-        console.error('Error cargando lista completa:', e);
-      }
-    };
-    loadAllNames();
-  }, []);
-
-  // Carga más Pokémon de la lista general (scroll infinito)
-  const loadMorePokemon = async () => {
-    // No cargar si ya hay una carga en curso, si hay búsqueda activa, o si hay filtro de tipo
-    if (loading || searchQuery.length > 0 || selectedType !== null) return;
-    setLoading(true);
-    try {
-      const data = await pokemonService.getPokemonList(limit, offset);
-      setPokemonList((prev) => [...prev, ...data.results]);
-      setOffset((prev) => prev + limit);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Carga los primeros Pokémon al abrir la pantalla
-  useEffect(() => {
-    loadMorePokemon();
-  }, []);
-
-  // Selecciona o deselecciona un tipo para filtrar la lista
-  const handleTypeSelect = async (typeKey: string) => {
-    if (selectedType === typeKey) {
-      // Tap en el tipo ya activo → quitar filtro
-      setSelectedType(null);
-      setTypeFilterList([]);
-      return;
-    }
-
-    setSelectedType(typeKey);
-    setLoadingType(true);
-    setSearchQuery(''); // Limpia la búsqueda al activar filtro por tipo
-
-    try {
-      // La API devuelve TODOS los Pokémon de ese tipo
-      const res = await fetch(`https://pokeapi.co/api/v2/type/${typeKey}`);
-      const data = await res.json();
-      const list: PokemonListItem[] = data.pokemon.map((p: any) => ({
-        name: p.pokemon.name,
-        url: p.pokemon.url,
-      }));
-      setTypeFilterList(list);
-    } catch (e) {
-      console.error(e);
-      setTypeFilterList([]);
-    } finally {
-      setLoadingType(false);
-    }
-  };
+  const {
+    displayList,
+    loading,
+    loadingType,
+    searchQuery,
+    selectedType,
+    handleSearchChange,
+    handleTypeSelect,
+    loadMorePokemon,
+  } = useHomeViewModel();
 
   const renderFooter = () => {
     if (!loading) return null;
     return <LoadingSpinner />;
   };
-
-  // Lista filtrada por nombre — usa la lista COMPLETA para encontrar cualquier Pokémon
-  const filteredList = allPokemon.filter(p =>
-    p.name.includes(searchQuery.toLowerCase().trim())
-  );
-
-  // Decide qué lista mostrar: tipo > búsqueda > lista completa
-  const displayList: PokemonListItem[] =
-    selectedType !== null
-      ? typeFilterList
-      : searchQuery.length > 0
-      ? filteredList
-      : pokemonList;
 
   return (
     <View style={styles.container}>
@@ -142,17 +60,10 @@ const HomeScreen = () => {
           placeholder="Buscar Pokémon..."
           placeholderTextColor="#888"
           value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuery(text);
-            // Al escribir, quita el filtro de tipo activo
-            if (selectedType) {
-              setSelectedType(null);
-              setTypeFilterList([]);
-            }
-          }}
+          onChangeText={handleSearchChange}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => handleSearchChange('')}>
             <Icon name="close-circle" size={18} color="#888" />
           </TouchableOpacity>
         )}

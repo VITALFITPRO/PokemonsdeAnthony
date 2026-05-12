@@ -51,11 +51,18 @@ const favoritesSlice = createSlice({
      */
     clearFavorites: (state) => {
       state.pokemonIds = [];
-    }
+    },
+    /**
+     * setFavorites — Reemplaza toda la lista con los IDs cargados desde SQLite
+     * Se usa al arrancar la app para sincronizar con la base de datos local
+     */
+    setFavorites: (state, action: PayloadAction<number[]>) => {
+      state.pokemonIds = action.payload;
+    },
   }
 });
 
 // Exportamos las acciones para usarlas desde cualquier pantalla
-export const { toggleFavorite, clearFavorites } = favoritesSlice.actions;
+export const { toggleFavorite, clearFavorites, setFavorites } = favoritesSlice.actions;
 // Exportamos el reducer para registrarlo en el store central
 export default favoritesSlice.reducer;

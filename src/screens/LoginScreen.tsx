@@ -1,54 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   LayoutAnimation, UIManager, Platform, Image, Alert,
   KeyboardAvoidingView, ScrollView,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { login } from '../store/slices/authSlice';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { AuthStackParamList } from '../types/navigation';
+import { useLoginViewModel } from '../viewmodels/useAuthViewModel';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
-
 const LoginScreen = () => {
-  const dispatch = useAppDispatch();
-  const navigation = useNavigation<LoginNav>();
-  // Lee todos los usuarios registrados (persiste entre sesiones)
-  const registeredUsers = useAppSelector(state => state.users.users);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleLogin = () => {
-    // Busca el usuario por email (case insensitive) y verifica la contraseña
-    const found = registeredUsers.find(
-      u =>
-        u.email.toLowerCase() === username.toLowerCase().trim() &&
-        u.password === password
-    );
-    if (found) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      dispatch(login({ username: found.email, rememberPassword: true }));
-    } else {
-      setError('Credenciales incorrectas');
-    }
-  };
-
-  const handleForgotPassword = () => {
-    Alert.alert(
-      'Recuperar contraseña',
-      'Se enviará un enlace de recuperación a tu correo registrado.',
-      [{ text: 'Entendido', style: 'default' }]
-    );
-  };
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    error,
+    showPassword,
+    setShowPassword,
+    handleLogin,
+    goToRegister,
+  } = useLoginViewModel();
 
   return (
     <KeyboardAvoidingView
@@ -75,8 +49,8 @@ const LoginScreen = () => {
           style={styles.input}
           placeholder="Correo electrónico"
           placeholderTextColor="#888"
-          value={username}
-          onChangeText={text => { setUsername(text); setError(''); }}
+          value={email}
+          onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
         />
@@ -89,7 +63,7 @@ const LoginScreen = () => {
           placeholder="Contraseña"
           placeholderTextColor="#888"
           value={password}
-          onChangeText={text => { setPassword(text); setError(''); }}
+          onChangeText={setPassword}
           secureTextEntry={!showPassword}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -99,7 +73,16 @@ const LoginScreen = () => {
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotContainer}>
+      <TouchableOpacity
+        onPress={() =>
+          Alert.alert(
+            'Recuperar contraseña',
+            'Se enviará un enlace de recuperación a tu correo registrado.',
+            [{ text: 'Entendido', style: 'default' }]
+          )
+        }
+        style={styles.forgotContainer}
+      >
         <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
       </TouchableOpacity>
 
@@ -107,7 +90,7 @@ const LoginScreen = () => {
         <Text style={styles.buttonText}>INGRESAR</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.registerContainer} onPress={() => navigation.navigate('Register')}>
+      <TouchableOpacity style={styles.registerContainer} onPress={goToRegister}>
         <Text style={styles.registerText}>¿No tienes cuenta? <Text style={styles.registerLink}>Regístrate</Text></Text>
       </TouchableOpacity>
       </ScrollView>

@@ -6,10 +6,12 @@ import favoritesReducer from './slices/favoritesSlice';
 import themeReducer from './slices/themeSlice';
 import usersReducer from './slices/usersSlice';
 import profileReducer from './slices/profileSlice';
+import pokemonCacheReducer from './slices/pokemonCacheSlice';
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
+  // pokemonCache NO está aquí → solo vive en memoria, se vacía al cerrar la app
   whitelist: ['auth', 'favorites', 'theme', 'users', 'profile'],
 };
 
@@ -19,6 +21,7 @@ const rootReducer = combineReducers({
   theme: themeReducer,
   users: usersReducer,
   profile: profileReducer,
+  pokemonCache: pokemonCacheReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
