@@ -4,12 +4,14 @@ import {
   TextInput, Image, Alert, Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
 
 // Opciones de género disponibles
 const GENDER_OPTIONS = ['Masculino', 'Femenino', 'Otro'];
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
   const {
     username, favoritesCount, isDark, profile,
     editing, draftName, draftAge, draftGender,
