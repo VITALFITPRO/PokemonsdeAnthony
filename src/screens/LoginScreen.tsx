@@ -24,6 +24,10 @@ const LoginScreen = () => {
     goToRegister,
   } = useLoginViewModel();
 
+  // LoginScreen no usa isDark para el fondo — el login siempre en oscuro
+  // pero los inputs y textos se adaptan si en el futuro se activa modo claro
+  // Actualmente el login mantiene el look oscuro como pantalla de bienvenida
+
   return (
     <KeyboardAvoidingView
       style={styles.keyboardView}

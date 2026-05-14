@@ -31,6 +31,17 @@ const PokemonDetailScreen = () => {
 
   const favorites = useAppSelector(state => state.favorites.pokemonIds);
   const isFavorite = favorites.includes(pokemonId);
+  const isDark = useAppSelector(state => state.theme.isDark);
+
+  const bg = isDark ? '#121212' : '#e8e8e8';
+  const cardBg = isDark ? '#1e1e1e' : '#fff';
+  const textColor = isDark ? '#fff' : '#111';
+  const subColor = isDark ? '#aaa' : '#666';
+  const sectionBorder = isDark ? '#333' : '#ddd';
+  const abilityBg = isDark ? '#333' : '#e0e0e0';
+  const descColor = isDark ? '#ccc' : '#444';
+  const langBg = isDark ? '#2a2a2a' : '#ddd';
+  const langText = isDark ? '#fff' : '#111';
 
   // Toda la lógica de TTS, descripción y habilidades en el ViewModel
   const {
@@ -64,7 +75,7 @@ const PokemonDetailScreen = () => {
 
   if (!pokemon) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: bg }]}>
         <LoadingSpinner />
       </View>
     );
@@ -74,7 +85,7 @@ const PokemonDetailScreen = () => {
   const imageUrl = pokemon.image;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={styles.scrollContent}>
 
       {/* Header: botón volver | botón idioma | estrella favorito */}
       <View style={styles.header}>
@@ -82,8 +93,8 @@ const PokemonDetailScreen = () => {
           <Icon name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={toggleLang} style={styles.langButton}>
-          <Text style={styles.langText}>{dic.ui.buttonLang}</Text>
+        <TouchableOpacity onPress={toggleLang} style={[styles.langButton, { backgroundColor: langBg }]}>
+          <Text style={[styles.langText, { color: langText }]}>{dic.ui.buttonLang}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleToggleFavorite} style={styles.favButton}>
@@ -101,12 +112,12 @@ const PokemonDetailScreen = () => {
       </View>
 
       {/* Tarjeta de información */}
-      <View style={styles.card}>
-        <Text style={styles.name}>
+      <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.name, { color: textColor }]}>
           {capitalizeFirstLetter(pokemon.name)} {formatPokemonId(pokemon.id)}
         </Text>
 
-        {category ? <Text style={styles.category}>{category}</Text> : null}
+        {category ? <Text style={[styles.category, { color: subColor }]}>{category}</Text> : null}
 
         <View style={styles.typesRow}>
           {pokemon.types.map(t => (
@@ -115,7 +126,7 @@ const PokemonDetailScreen = () => {
         </View>
 
         {/* Stats base */}
-        <Text style={styles.sectionTitle}>{dic.ui.statsTitle}</Text>
+        <Text style={[styles.sectionTitle, { color: textColor, borderBottomColor: sectionBorder }]}>{dic.ui.statsTitle}</Text>
         {pokemon.stats.map(s => (
           <StatBar
             key={s.name}
@@ -126,14 +137,14 @@ const PokemonDetailScreen = () => {
         ))}
 
         {/* Habilidades */}
-        <Text style={styles.sectionTitle}>{dic.ui.abilitiesTitle}</Text>
+        <Text style={[styles.sectionTitle, { color: textColor, borderBottomColor: sectionBorder }]}>{dic.ui.abilitiesTitle}</Text>
         {loadingExtra ? (
           <ActivityIndicator color="#5c5cff" style={{ marginVertical: 10 }} />
         ) : (
           <View style={styles.abilitiesRow}>
             {translatedAbilities.map((ab, i) => (
-              <View key={i} style={styles.abilityBadge}>
-                <Text style={styles.abilityText}>{ab}</Text>
+              <View key={i} style={[styles.abilityBadge, { backgroundColor: abilityBg }]}>
+                <Text style={[styles.abilityText, { color: textColor }]}>{ab}</Text>
               </View>
             ))}
           </View>
@@ -142,10 +153,10 @@ const PokemonDetailScreen = () => {
         {/* Descripción */}
         {description ? (
           <>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: textColor, borderBottomColor: sectionBorder }]}>
               {lang === 'es' ? 'Descripción' : 'Description'}
             </Text>
-            <Text style={styles.description}>{description}</Text>
+            <Text style={[styles.description, { color: descColor }]}>{description}</Text>
           </>
         ) : null}
 

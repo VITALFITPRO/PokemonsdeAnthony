@@ -5,16 +5,22 @@ import PokemonCard from '../components/PokemonCard';
 
 const FavoritesScreen = () => {
   const favoriteIds = useAppSelector(state => state.favorites.pokemonIds);
+  const isDark = useAppSelector(state => state.theme.isDark);
+
+  const bg = isDark ? '#121212' : '#f0f0f0';
+  const titleColor = isDark ? '#fff' : '#111';
+  const subColor = isDark ? '#888' : '#666';
+  const emptyTextColor = isDark ? '#fff' : '#111';
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>Pokemon Guardados</Text>
-      <Text style={styles.subTitle}>({favoriteIds.length}) Pokémon favoritos</Text>
-      
+    <View style={[styles.container, { backgroundColor: bg }]}>
+      <Text style={[styles.headerTitle, { color: titleColor }]}>Pokemon Guardados</Text>
+      <Text style={[styles.subTitle, { color: subColor }]}>({favoriteIds.length}) Pokémon favoritos</Text>
+
       {favoriteIds.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No tienes Pokémon en favoritos.</Text>
-          <Text style={styles.emptySubText}>Toca la estrella en los detalles de un Pokémon para guardarlo.</Text>
+          <Text style={[styles.emptyText, { color: emptyTextColor }]}>No tienes Pokémon en favoritos.</Text>
+          <Text style={[styles.emptySubText, { color: subColor }]}>Toca la estrella en los detalles de un Pokémon para guardarlo.</Text>
         </View>
       ) : (
         <FlatList
