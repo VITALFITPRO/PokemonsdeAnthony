@@ -1,22 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View, Text, Image, StyleSheet, ScrollView,
   TouchableOpacity, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { pokemonService } from '../services/pokemonService';
-import { PokemonViewData } from '../types/pokemon';
 import PokemonTypeBadge from '../components/PokemonTypeBadge';
 import StatBar from '../components/StatBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { toggleFavorite } from '../store/slices/favoritesSlice';
 import { MainStackParamList } from '../types/navigation';
 import { capitalizeFirstLetter, formatPokemonId } from '../utils/helpers';
-import { addFavoriteDB, removeFavoriteDB } from '../database/db';
 import { traducciones } from '../utils/translations';
 import { usePokemonSpeech } from '../viewmodels/usePokemonSpeech';
+import { usePokemonDetailViewModel } from '../viewmodels/usePokemonDetailViewModel';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 type DetailScreenRouteProp = RouteProp<MainStackParamList, 'PokemonDetail'>;
@@ -24,42 +20,18 @@ type DetailScreenRouteProp = RouteProp<MainStackParamList, 'PokemonDetail'>;
 const PokemonDetailScreen = () => {
   const route = useRoute<DetailScreenRouteProp>();
   const navigation = useNavigation();
-  const dispatch = useAppDispatch();
   const { pokemonId } = route.params;
 
-  const [pokemon, setPokemon] = useState<PokemonViewData | null>(null);
+  // Datos del Pokémon, favoritos y colores de tema/tipo
+  const {
+    pokemon,
+    isFavorite,
+    handleToggleFavorite,
+    bg, cardBg, textColor, subColor, sectionBorder, abilityBg, descColor, langBg, langText,
+    typeHex, typeBgTop,
+  } = usePokemonDetailViewModel(pokemonId);
 
-  const favorites = useAppSelector(state => state.favorites.pokemonIds);
-  const isFavorite = favorites.includes(pokemonId);
-  const isDark = useAppSelector(state => state.theme.isDark);
-
-  const bg = isDark ? '#121212' : '#e8e8e8';
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const textColor = isDark ? '#fff' : '#111';
-  const subColor = isDark ? '#aaa' : '#666';
-  const sectionBorder = isDark ? '#333' : '#ddd';
-  const abilityBg = isDark ? '#333' : '#e0e0e0';
-  const descColor = isDark ? '#ccc' : '#444';
-  const langBg = isDark ? '#2a2a2a' : '#ddd';
-  const langText = isDark ? '#fff' : '#111';
-
-  // Color de fondo tenue basado en el tipo primario del Pokémon
-  const TYPE_COLORS: Record<string, string> = {
-    grass: '#78C850', poison: '#A040A0', electric: '#F8D030', fire: '#F08030',
-    flying: '#A890F0', water: '#6890F0', bug: '#A8B820', normal: '#A8A878',
-    ground: '#E0C068', fairy: '#EE99AC', fighting: '#C03028', psychic: '#F85888',
-    rock: '#B8A038', ghost: '#705898', ice: '#98D8D8', dragon: '#7038F8',
-    dark: '#705848', steel: '#B8B8D0',
-  };
-  const primaryType = pokemon?.types?.[0] ?? 'normal';
-  const typeHex = TYPE_COLORS[primaryType.toLowerCase()] ?? '#A8A878';
-  const r = parseInt(typeHex.slice(1, 3), 16);
-  const g = parseInt(typeHex.slice(3, 5), 16);
-  const b = parseInt(typeHex.slice(5, 7), 16);
-  const typeBgTop = `rgba(${r},${g},${b},0.25)`;  // zona superior con imagen
-  const typeBgCard = `rgba(${r},${g},${b},0.08)`;  // zona de la tarjeta más sutil
-
-  // Toda la lógica de TTS, descripción y habilidades en el ViewModel
+  // Lógica de TTS, descripción y habilidades
   const {
     lang,
     isPlaying,
@@ -70,24 +42,6 @@ const PokemonDetailScreen = () => {
     toggleTTS,
     toggleLang,
   } = usePokemonSpeech(pokemonId, pokemon);
-
-  const handleToggleFavorite = () => {
-    if (isFavorite) {
-      removeFavoriteDB(pokemonId);
-    } else {
-      addFavoriteDB(pokemonId);
-    }
-    dispatch(toggleFavorite(pokemonId));
-  };
-
-  // Carga los datos principales del Pokémon y los mapea al modelo interno
-  useEffect(() => {
-    const loadDetail = async () => {
-      const raw = await pokemonService.getPokemonById(pokemonId);
-      setPokemon(pokemonService.mapToPokemonViewData(raw));
-    };
-    loadDetail();
-  }, [pokemonId]);
 
   if (!pokemon) {
     return (

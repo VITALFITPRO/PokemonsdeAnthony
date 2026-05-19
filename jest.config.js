@@ -6,5 +6,8 @@ module.exports = {
   moduleNameMapper: {
     '@react-native-async-storage/async-storage': '<rootDir>/__mocks__/@react-native-async-storage/async-storage.js',
     'react-native-tts': '<rootDir>/__mocks__/react-native-tts.js',
+    'react-native-sqlite-storage': '<rootDir>/__mocks__/react-native-sqlite-storage.js',
+    'react-native-safe-area-context': '<rootDir>/__mocks__/react-native-safe-area-context.js',
+    'react-native-vector-icons/(.*)': '<rootDir>/__mocks__/react-native-vector-icons/Ionicons.js',
   },
 };
