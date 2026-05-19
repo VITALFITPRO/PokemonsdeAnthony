@@ -43,6 +43,22 @@ const PokemonDetailScreen = () => {
   const langBg = isDark ? '#2a2a2a' : '#ddd';
   const langText = isDark ? '#fff' : '#111';
 
+  // Color de fondo tenue basado en el tipo primario del Pokémon
+  const TYPE_COLORS: Record<string, string> = {
+    grass: '#78C850', poison: '#A040A0', electric: '#F8D030', fire: '#F08030',
+    flying: '#A890F0', water: '#6890F0', bug: '#A8B820', normal: '#A8A878',
+    ground: '#E0C068', fairy: '#EE99AC', fighting: '#C03028', psychic: '#F85888',
+    rock: '#B8A038', ghost: '#705898', ice: '#98D8D8', dragon: '#7038F8',
+    dark: '#705848', steel: '#B8B8D0',
+  };
+  const primaryType = pokemon?.types?.[0] ?? 'normal';
+  const typeHex = TYPE_COLORS[primaryType.toLowerCase()] ?? '#A8A878';
+  const r = parseInt(typeHex.slice(1, 3), 16);
+  const g = parseInt(typeHex.slice(3, 5), 16);
+  const b = parseInt(typeHex.slice(5, 7), 16);
+  const typeBgTop = `rgba(${r},${g},${b},0.25)`;  // zona superior con imagen
+  const typeBgCard = `rgba(${r},${g},${b},0.08)`;  // zona de la tarjeta más sutil
+
   // Toda la lógica de TTS, descripción y habilidades en el ViewModel
   const {
     lang,
@@ -88,7 +104,7 @@ const PokemonDetailScreen = () => {
     <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={styles.scrollContent}>
 
       {/* Header: botón volver | botón idioma | estrella favorito */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: typeBgTop }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
@@ -107,12 +123,12 @@ const PokemonDetailScreen = () => {
       </View>
 
       {/* Imagen oficial */}
-      <View style={styles.imageContainer}>
+      <View style={[styles.imageContainer, { backgroundColor: typeBgTop }]}>
         <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
       </View>
 
       {/* Tarjeta de información */}
-      <View style={[styles.card, { backgroundColor: cardBg }]}>
+      <View style={[styles.card, { backgroundColor: cardBg, borderTopColor: typeHex }]}>
         <Text style={[styles.name, { color: textColor }]}>
           {capitalizeFirstLetter(pokemon.name)} {formatPokemonId(pokemon.id)}
         </Text>
@@ -216,11 +232,11 @@ const styles = StyleSheet.create({
   },
   image: { width: SCREEN_WIDTH * 0.85, height: 280 },
   card: {
-    backgroundColor: '#1e1e1e',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 25,
     marginTop: -20,
+    borderTopWidth: 4,
   },
   name: {
     fontSize: 28,
