@@ -5,13 +5,15 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
+import { TabParamList } from '../types/navigation';
 
 // Opciones de género disponibles
 const GENDER_OPTIONS = ['Masculino', 'Femenino', 'Otro'];
 
 const ProfileScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   const {
     username, favoritesCount, isDark, profile,
     editing, draftName, draftAge, draftGender,

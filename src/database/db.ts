@@ -1,3 +1,4 @@
+// @ts-ignore
 import { enablePromise, openDatabase, SQLiteDatabase } from 'react-native-sqlite-storage';
 
 // Habilitar promesas para react-native-sqlite-storage
